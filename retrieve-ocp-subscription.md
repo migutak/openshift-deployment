@@ -1,0 +1,4 @@
+## Retrieve Red Hat registered account for your clients with Cloud Paks entitlement
+1. The following technote provides information on how to secure registered account for your clients with Cloud Paks entitlement: https://www.ibm.com/support/pages/node/1096000
+2. If the client PPA primary contact didn't receive the registration emails from Red Hat, you can raise a request on #ibm-rh-fulfillment-project-office Slack channel with ICN/Site-Number/agreement-number (can be retrieved from [fastpass](https://fastpass.w3cloud.ibm.com/sales/fastpass/fastpass.jsp)), they will provide Red Hat "Account #" and resend the registration emails to the client.
+3. if client still didn't receive the registration emails, send an email to "customerservice@redhat.com" with "Account #" and they will provide you with the contact person at client side that have received the emails, so that you can arrange with him/her.

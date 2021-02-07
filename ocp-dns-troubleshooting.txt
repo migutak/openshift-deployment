@@ -1,0 +1,44 @@
+# Openshift troubleshooting
+Source: https://access.redhat.com/solutions/3804501
+
+1. Check the cluster operator to see if it is available:
+# oc get clusteroperator dns
+2. Check to see if there are pods and services created under openshift-dns-operator
+
+# oc get all -n openshift-dns-operator
+3. Check the logs of dns-operator pod
+
+# oc logs pod/`oc get pods -o=jsonpath="{.items.metadata.name}" -n openshift-dns-operator` -n openshift-dns-operator
+4. Check dns components are running under openshift-dns project:
+
+# oc get all -n openshift-dns5. Check the pod resolver is pointing to DNS Service IP:
+
+# export PODS=`oc get pods -o=jsonpath="{.items[*].metadata.name}" -n openshift-apiserver`
+# for pod in $PODS;do oc exec $pod -n openshift-apiserver -- cat /etc/resolv.conf ;done;
+6. You can check coredns container logs on node:
+
+# export PODS=`oc get pods -o=jsonpath="{.items[*].metadata.name}" -n openshift-dns`
+# for pod in $PODS;do oc logs $pod -c dns -n openshift-dns &> $pod.log;done;
+7. Test resolving kubernetes service hostname to and from every DNS pod:
+
+# oc get pods -n openshift-dns \
+-o custom-columns="Pod Name:.metadata.name,Pod IP:.status.podIP,Node IP:.status.hostIP,Status:.status.phase"
+# for dnspod in `oc get pods -n openshift-dns -o name --no-headers`; do echo "Testing $dnspod"; for dnsip in `oc get pods -n openshift-dns -o go-template='{{ range .items }} {{index .status.podIP }} {{end}}'`; do echo -e "\tMaking query to $dnsip";
+oc exec -n openshift-dns $dnspod -- dig @$dnsip kubernetes.default.svc.cluster.local -p 5353 +short 2>/dev/null | sed 's/^/\t/'; done; done
+8. Test resolving external queries like google.com:
+# for dnspod in `oc get pods -n openshift-dns -o name --no-headers`; do echo "Testing $dnspod"; for dnsip in `oc get pods -n openshift-dns -o go-template='{{ range .items }} {{index .status.podIP }} {{end}}'`; do echo -e "\t Making query to
+$dnsip"; oc exec -n openshift-dns $dnspod -- dig @$dnsip redhat.com -p 5353 +short 2>/dev/null; done; done
+9. Check a pod to see the DNS lookup time versus total request time
+$ echo $pod
+pod-example-5f78c768b-cg88c
+$ oc exec $pod -- bash -c 'while true; do echo -n "$(date) "; curl -s -o /dev/null -w "%{time_namelookup} %{time_total} %{http_code}
+" https://www.redhat.com -k; sleep 10; done'
+For IPv4 only:
+$ oc exec $pod -- bash -c 'while true; do echo -n "$(date) "; curl -s -o /dev/null -w "%{time_namelookup} %{time_total} %{http_code}
+" -4 https://www.redhat.com -k; sleep 10; done'
+For IPv6 only
+$ oc exec $pod -- bash -c 'while true; do echo -n "$(date) "; curl -s -o /dev/null -w "%{time_namelookup} %{time_total} %{http_code}
+" -4 https://www.redhat.com -k; sleep 10; done'
+10. From inside a pod, run the following to discard SDN communication issue with coredns pods.
+oc -n openshift-dns get pod -o wide | awk '{print $6}' | grep -v IP | while read IP; do kubectl exec $POD -- nslookup -port=5353 www.redhat.com $IP; done
+```
